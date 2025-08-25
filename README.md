@@ -10,6 +10,6 @@ Animated distortion image effect
 This project shows how to apply an animated distortion to an image (in pure Pascal, without shaders).<br>
 It works on a TBitmap and can therefore be used for a simple 2D image or for a texture applied to a 3D object.
 
-[![Distortion](https://github.com/gbegreg/FunMaze/blob/main/capture.png)](https://youtu.be/1MBjJuxV3wM?si=7mU11MSj5OhxCAoQ)
+[![Distortion](https://github.com/gbegreg/Distortion/blob/main/capture.png)](https://youtu.be/GSDrdj40194)
 
 (click the image to see the Youtube video)
