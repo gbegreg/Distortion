@@ -98,8 +98,11 @@ begin
   aDistortion.frequencyX := nbFrequenceX.value;
   aDistortion.amplitudeY := Round(nbAmplitudeY.value);
   aDistortion.frequencyY := nbFrequenceY.value;
-  if cbStyle.ItemIndex = 0 then aDistortion.distortionStyle := TDistortionStyle.all
-  else aDistortion.distortionStyle := TDistortionStyle.middle;
+  case cbStyle.ItemIndex of
+    1: aDistortion.distortionStyle := TDistortionStyle.top;
+    2: aDistortion.distortionStyle := TDistortionStyle.bottom;
+    else aDistortion.distortionStyle := TDistortionStyle.all;
+  end;
 
   if en3D then LightMaterialSource1.Texture.Assign(aDistortion.ApplyDistortion)
   else image.bitmap.assign(aDistortion.ApplyDistortion);

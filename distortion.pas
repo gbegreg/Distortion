@@ -2,10 +2,10 @@ unit distortion;
 
 interface
 
-uses System.Math, FMX.Types, FMX.Filter.Effects, FMX.Graphics, FMX.Objects, System.UITypes, system.sysutils;
+uses System.Math, FMX.Types, FMX.Filter.Effects, FMX.Graphics, FMX.Objects, System.UITypes, system.sysutils, FMX.Utils;
 
 type
-  TDistortionStyle = (all, middle);
+  TDistortionStyle = (all, top, bottom);
   TDistortion = class
   private
     FOriginal, FModify: TBitmap;
@@ -29,39 +29,48 @@ implementation
 function TDistortion.ApplyDistortion: TBitmap;
 var
   SrcData, DstData: TBitmapData;
+  SrcPtr, DstPtr: PAlphaColorArray;
   srcColor: TAlphaColor;
+  newX, newY, y, x: Integer;
 begin
   time := time + speed;
+
   // time a changé, on recacule les valeurs dans les 2 tableaux
   BuildSinTable(FOriginal.Height);
   BuildCosTable(FOriginal.Width);
 
+  FModify.SetSize(FOriginal.Width, FOriginal.Height);
+  var W := FOriginal.Width;
+  var H := FOriginal.Height;
+
   if not (FOriginal.Map(TMapAccess.Read, SrcData) and
-          FModify.Map(TMapAccess.Write, DstData)) then begin
-    Result := nil;
-    Exit;
-  end;
+          FModify.Map(TMapAccess.Write, DstData)) then
+    Exit(nil);
 
   try
-    for var y := 0 to FOriginal.Height - 1 do begin
-      for var x := 0 to FOriginal.Width - 1 do begin
+    var startY := 0;
+    var endY := H;
+    case distortionStyle of
+       TDistortionStyle.bottom: startY := round(H *0.5);
+       TDistortionStyle.top: endY := round(H *0.5);
+    end;
 
-        var newX := x + FSinTable[y];  // On récupère la valeur depuis le tableau cela évite de la calculer pour chaque pixel
-        var newY := y + FCosTable[x];  // Même chose avec le second tableau
+    for y := startY to endY - 1 do
+    begin
+      // Accès direct à la ligne source/destination
+      SrcPtr := SrcData.GetScanline(y);
+      DstPtr := DstData.GetScanline(y);
 
-        if inRange(newX, 0, FOriginal.Width-1) and inRange(newY, 0, FOriginal.Height-1) then  // Si les nouvelles coordonnées calculées sont bien dans l'image d'origine
-          srcColor := SrcData.GetPixel(newX, newY) // alors on récupère la couleur du pixel de l'image d'origine à ces nouvelles coordonnées
-        else begin
-          if newX < 0 then newX := FOriginal.width + Newx
-          else newX := newX - FOriginal.Width;
-          if newY < 0 then newY := newY + FOriginal.height
-          else newY := newy - FOriginal.height;
-          if distortionStyle = TDistortionStyle.middle then newY := newY + Round(FOriginal.Height * 0.5);
+      for x := 0 to W - 1 do begin
+        // Application de la distorsion sinusoïdale
+        newX := (x + FSinTable[y] + W) mod W;
+        newY := (y + FCosTable[x] + H) mod H;
 
-          srcColor := SrcData.GetPixel(newX, newY);
-        end;
+        // Lecture directe de la couleur source
+        srcColor := PAlphaColorArray(SrcData.GetScanline(newY))^[newX];
 
-        DstData.SetPixel(x, y, srcColor); // On dessine dans l'image de destination aux coordonnées (x,y) la couleur trouvée précédemment
+        // Écriture directe
+        DstPtr^[x] := srcColor;
       end;
     end;
   finally
@@ -71,6 +80,7 @@ begin
 
   Result := FModify;
 end;
+
 
 constructor TDistortion.Create(const AImage: TBitmap);
 begin
@@ -105,9 +115,11 @@ end;
 procedure TDistortion.BuildSinTable(const AHeight: Integer);
 begin
   var start := 0;
-  if distortionStyle = TDistortionStyle.middle then start := round(AHeight * 0.5);
+  var endY := AHeight;
+  if distortionStyle = TDistortionStyle.top then endy := round(AHeight * 0.5);
+  if distortionStyle = TDistortionStyle.bottom then start := round(AHeight * 0.5);
   var amplitude := 0.0;
-  for var i := start to AHeight - 1 do begin
+  for var i := start to endY - 1 do begin
     if start = 0 then amplitude := amplitudeX
     else begin
       if amplitude < amplitudeX then amplitude := amplitude + 0.1
